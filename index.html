@@ -5,10 +5,7 @@
   <title>Frann Playlist Viewer</title>
   <style>
     :root {
-      /* ここを変更すれば比率が簡単に変わります */
-      --thumbnail-ratio: 50%;   /* サムネイルエリアの幅（%） */
-      --player-ratio: 50%;      /* プレイヤーエリアの幅（%） */
-      /* 合計が100%になるように調整してください */
+      --thumbnail-ratio: 55%;   /* サムネイルエリアの幅（調整してください） */
     }
 
     html, body {
@@ -22,7 +19,7 @@
       gap: 15px;
     }
 
-    /* 左側：再生履歴（スライド） */
+    /* 左側：再生履歴（スライド格納） */
     #sidebar {
       width: 0;
       overflow: hidden;
@@ -34,7 +31,10 @@
       align-self: flex-start;
     }
     #sidebar.open { width: 340px; padding: 15px; }
-    #sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+
+    #sidebar-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+    }
     #sidebar h3 { margin: 0; font-size: 16px; }
     #clearHistoryBtn {
       font-size: 11px; padding: 4px 10px;
@@ -47,7 +47,8 @@
     }
     .history-item:hover { background: #f5f5f5; }
 
-    #toggleBtn {
+    /* トグルボタン（再生履歴） */
+    #toggleHistoryBtn {
       position: fixed; left: 15px; top: 25px;
       width: 32px; height: 32px;
       background: #333; color: white;
@@ -59,22 +60,19 @@
     #main {
       flex: 1;
       display: flex;
-      gap: 20px;
+      gap: 15px;
       max-width: 1400px;
     }
 
     /* サムネイルエリア */
     #thumbnail-area {
-      flex: 0 0 var(--thumbnail-ratio);
+      flex: 1;
       display: flex;
       flex-direction: column;
       max-height: 100vh;
+      transition: flex 0.4s ease;
     }
-    h2 { 
-      margin: 0 0 15px 0; 
-      text-align: center; 
-      font-size: 25px; 
-    }
+    h2 { margin: 0 0 15px 0; text-align: center; font-size: 25px; }
 
     #videos-wrapper {
       flex: 1;
@@ -124,23 +122,47 @@
       outline-offset: -4px;
     }
 
-    /* プレイヤーエリア（右端に配置） */
+    /* プレイヤーエリア（右端・格納可能） */
     #player-area {
-      flex: 0 0 var(--player-ratio);
+      width: var(--thumbnail-ratio);   /* ここで幅調整 */
+      flex-shrink: 0;
       align-self: flex-start;
-      position: sticky;
-      top: 20px;
+      transition: width 0.4s ease;
+      position: relative;
+    }
+    #player-area.collapsed {
+      width: 60px;   /* 格納時の幅（ボタンだけ見える） */
     }
     #player {
       width: 100%;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+      display: none;
+    }
+    #player-area:not(.collapsed) #player {
+      display: block;
     }
     iframe {
       width: 100%;
       aspect-ratio: 16 / 9;
       border: none;
+    }
+
+    /* プレイヤー格納ボタン */
+    #togglePlayerBtn {
+      position: absolute;
+      top: 20px;
+      right: -18px;
+      width: 36px; height: 36px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 210;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
 
     #loading {
@@ -176,8 +198,10 @@
 </head>
 <body>
 
-  <button id="toggleBtn">›</button>
+  <!-- 再生履歴トグル -->
+  <button id="toggleHistoryBtn">›</button>
 
+  <!-- 再生履歴 -->
   <div id="sidebar">
     <div id="sidebar-header">
       <h3>再生履歴</h3>
@@ -186,6 +210,7 @@
     <div id="history"></div>
   </div>
 
+  <!-- メイン -->
   <div id="main">
     <div id="thumbnail-area">
       <h2>Frann Playlist Viewer</h2>
@@ -195,11 +220,14 @@
       </div>
     </div>
 
+    <!-- プレイヤーエリア -->
     <div id="player-area">
+      <button id="togglePlayerBtn">›</button>
       <div id="player"></div>
     </div>
   </div>
 
+  <!-- 右下固定ボタン -->
   <div class="fixed-buttons">
     <button id="jumpBtn" class="fixed-btn">▶ 再生中へ戻る</button>
     <button id="topBtn" class="fixed-btn">↑ サムネイル一番上に戻る</button>
@@ -212,14 +240,17 @@
   let allItems = [];
   let currentActive = null;
   let currentVideoEl = null;
-  let isSidebarOpen = false;
+  let isHistoryOpen = false;
+  let isPlayerOpen = true;   // プレイヤーは初期状態で開く
 
   const sidebar = document.getElementById("sidebar");
-  const toggleBtn = document.getElementById("toggleBtn");
+  const toggleHistoryBtn = document.getElementById("toggleHistoryBtn");
+  const togglePlayerBtn = document.getElementById("togglePlayerBtn");
   const videosWrapper = document.getElementById("videos-wrapper");
   const videosContainer = document.getElementById("videos");
   const loadingEl = document.getElementById("loading");
   const player = document.getElementById("player");
+  const playerArea = document.getElementById("player-area");
   const jumpBtn = document.getElementById("jumpBtn");
   const topBtn = document.getElementById("topBtn");
   const clearHistoryBtn = document.getElementById("clearHistoryBtn");
@@ -255,16 +286,27 @@
     }
   }
 
-  function toggleSidebar() {
-    isSidebarOpen = !isSidebarOpen;
-    if (isSidebarOpen) {
+  // 再生履歴トグル
+  function toggleHistory() {
+    isHistoryOpen = !isHistoryOpen;
+    if (isHistoryOpen) {
       sidebar.classList.add("open");
-      toggleBtn.textContent = "‹";
-      toggleBtn.style.left = "345px";
+      toggleHistoryBtn.textContent = "‹";
     } else {
       sidebar.classList.remove("open");
-      toggleBtn.textContent = "›";
-      toggleBtn.style.left = "15px";
+      toggleHistoryBtn.textContent = "›";
+    }
+  }
+
+  // プレイヤートグル
+  function togglePlayer() {
+    isPlayerOpen = !isPlayerOpen;
+    if (isPlayerOpen) {
+      playerArea.classList.remove("collapsed");
+      togglePlayerBtn.textContent = "›";
+    } else {
+      playerArea.classList.add("collapsed");
+      togglePlayerBtn.textContent = "‹";
     }
   }
 
@@ -322,15 +364,8 @@
   }
 
   // ボタン機能
-  jumpBtn.onclick = () => {
-    if (currentVideoEl) {
-      currentVideoEl.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  };
-
-  topBtn.onclick = () => {
-    videosWrapper.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  jumpBtn.onclick = () => currentVideoEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+  topBtn.onclick = () => videosWrapper.scrollTo({ top: 0, behavior: "smooth" });
 
   // メイン
   async function main() {
@@ -345,7 +380,8 @@
     }
   }
 
-  toggleBtn.addEventListener("click", toggleSidebar);
+  toggleHistoryBtn.addEventListener("click", toggleHistory);
+  togglePlayerBtn.addEventListener("click", togglePlayer);
   clearHistoryBtn.addEventListener("click", clearHistory);
   main();
 </script>
