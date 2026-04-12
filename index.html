@@ -15,7 +15,7 @@
       gap: 15px;
     }
 
-    /* 左側：再生履歴（スライド） */
+    /* 左側：再生履歴 */
     #sidebar {
       width: 0;
       overflow: hidden;
@@ -79,6 +79,7 @@
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+      transition: all 0.2s;
     }
     .video-item:hover { transform: translateY(-4px); }
     .thumbnail { position: relative; cursor: pointer; }
@@ -107,8 +108,12 @@
       overflow: hidden;
       min-height: 42px;
     }
+    .active {
+      outline: 4px solid #ff0000;
+      outline-offset: -4px;
+    }
 
-    /* プレイヤー（固定） */
+    /* プレイヤー */
     #player-area {
       width: 720px;
       flex-shrink: 0;
@@ -135,6 +140,7 @@
       font-size: 16px;
     }
 
+    /* 右下ボタン */
     .fixed-buttons {
       position: fixed;
       right: 40px;
@@ -186,7 +192,7 @@
 
   <div class="fixed-buttons">
     <button id="jumpBtn" class="fixed-btn">▶ 再生中へ戻る</button>
-    <button id="topBtn" class="fixed-btn">↑ 一番上に戻る</button>
+    <button id="topBtn" class="fixed-btn">↑ サムネイル一番上に戻る</button>
   </div>
 
 <script>
@@ -252,7 +258,6 @@
     }
   }
 
-  // 全動画を一括取得（100個でも200個でも対応）
   async function fetchAllVideos() {
     let items = [];
     let pageToken = "";
@@ -266,7 +271,6 @@
     return items;
   }
 
-  // 全サムネイルを一括表示
   function renderAllVideos(items) {
     videosContainer.innerHTML = "";
     const fragment = document.createDocumentFragment();
@@ -307,13 +311,32 @@
     saveHistory({ id: videoId, title });
   }
 
+  // ボタン機能修正
+  jumpBtn.onclick = () => {
+    if (currentVideoEl) {
+      currentVideoEl.scrollIntoView({
+        behavior: "smooth",
+        block: "center"     // 中央に表示されるように
+      });
+    } else {
+      alert("現在再生中の動画がありません");
+    }
+  };
+
+  topBtn.onclick = () => {
+    videosWrapper.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  };
+
   // メイン実行
   async function main() {
     try {
-      loadingEl.textContent = "全動画を読み込み中...（100〜200個でも大丈夫です）";
-      allItems = await fetchAllVideos();     // 全動画取得
+      loadingEl.textContent = "全動画を読み込み中...";
+      allItems = await fetchAllVideos();
       renderHistory();
-      renderAllVideos(allItems);             // 一括表示
+      renderAllVideos(allItems);
     } catch (err) {
       videosContainer.innerHTML = `<p style="color:red; padding:20px;">エラー: ${err.message}</p>`;
       loadingEl.style.display = "none";
