@@ -85,7 +85,7 @@
 
     /* 右サイドバー */
     #sidebar {
-      width: 320px;
+      width: 340px;
       border-left: 1px solid #ddd;
       background: white;
       padding: 20px 15px;
@@ -95,10 +95,28 @@
       top: 0;
     }
     #sidebar h3 {
-      margin: 0 0 15px 0;
+      margin: 0 0 8px 0;
       padding-bottom: 8px;
       border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
+
+    /* 再生履歴クリアボタン */
+    #clearHistoryBtn {
+      font-size: 12px;
+      padding: 4px 10px;
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #clearHistoryBtn:hover {
+      background: #d32f2f;
+    }
+
     .history-item {
       cursor: pointer;
       padding: 10px;
@@ -111,47 +129,37 @@
       background: #f5f5f5;
     }
 
-    /* 既存の再生中へ戻るボタン */
-    #jumpBtn {
-      position: fixed;
-      right: 340px;
-      bottom: 25px;
-      padding: 12px 20px;
-      border: none;
-      border-radius: 999px;
-      background: #ff0000;
-      color: #fff;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      display: none;
-      z-index: 100;
-    }
-    #jumpBtn:hover {
-      background: #cc0000;
-    }
-
-    /* 新しく追加：1番上に移動ボタン */
-    #topBtn {
+    /* 固定ボタンエリア */
+    .fixed-buttons {
       position: fixed;
       right: 20px;
       bottom: 25px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 100;
+    }
+
+    .fixed-btn {
       padding: 12px 18px;
       border: none;
       border-radius: 999px;
-      background: #333;
       color: #fff;
-      font-size: 18px;
       font-weight: bold;
       cursor: pointer;
       box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      display: none;
-      z-index: 100;
       transition: all 0.2s;
+      white-space: nowrap;
     }
-    #topBtn:hover {
-      background: #555;
+    .fixed-btn:hover {
       transform: scale(1.05);
+    }
+
+    #jumpBtn {
+      background: #ff0000;
+    }
+    #topBtn {
+      background: #333;
     }
   </style>
 </head>
@@ -163,31 +171,37 @@
 </div>
 
 <div id="sidebar">
-  <h3>再生履歴</h3>
+  <h3>
+    再生履歴
+    <button id="clearHistoryBtn">全削除</button>
+  </h3>
   <div id="history"></div>
 </div>
 
-<!-- 既存ボタン -->
-<button id="jumpBtn">▶ 再生中へ戻る</button>
-
-<!-- 新規追加：1番上に移動ボタン -->
-<button id="topBtn">↑ 1番上に戻る</button>
+<!-- 固定ボタン（右下） -->
+<div class="fixed-buttons">
+  <button id="jumpBtn" class="fixed-btn">▶ 再生中へ戻る</button>
+  <button id="topBtn" class="fixed-btn">↑ 一番上に戻る</button>
+</div>
 
 <script>
   const apiKey = "AIzaSyAxk1YpQSe-qDtFUSUmnjnduanag41Mlyk";
   const playlistId = "PLExT6MVBKs2CzmEcSCpaSQP_u7XONu6kD";
   let currentActive = null;
   let currentVideoEl = null;
+
   const videosContainer = document.getElementById("videos");
   const player = document.getElementById("player");
   const jumpBtn = document.getElementById("jumpBtn");
-  const topBtn = document.getElementById("topBtn");        // ← 追加
+  const topBtn = document.getElementById("topBtn");
+  const clearHistoryBtn = document.getElementById("clearHistoryBtn");
   const historyBox = document.getElementById("history");
 
-  // 履歴機能（変更なし）
+  // 履歴機能
   function loadHistory() {
     return JSON.parse(localStorage.getItem("frann_history") || "[]");
   }
+
   function saveHistory(video) {
     let history = loadHistory();
     history = history.filter(item => item.id !== video.id);
@@ -196,9 +210,14 @@
     localStorage.setItem("frann_history", JSON.stringify(history));
     renderHistory();
   }
+
   function renderHistory() {
     const history = loadHistory();
     historyBox.innerHTML = "";
+    if (history.length === 0) {
+      historyBox.innerHTML = '<p style="color:#888; text-align:center; padding:20px;">履歴はありません</p>';
+      return;
+    }
     history.forEach(item => {
       const div = document.createElement("div");
       div.className = "history-item";
@@ -212,7 +231,15 @@
     });
   }
 
-  // API取得・動画描画部分（変更なし）
+  // 再生履歴を全削除
+  function clearHistory() {
+    if (confirm("再生履歴をすべて削除しますか？")) {
+      localStorage.removeItem("frann_history");
+      renderHistory();
+    }
+  }
+
+  // API取得
   async function fetchAllVideos(pageToken = "", allItems = []) {
     const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${apiKey}&pageToken=${pageToken}`;
     const res = await fetch(url);
@@ -273,29 +300,16 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // ジャンプボタン（再生中へ戻る）
+  // ボタン機能
   jumpBtn.onclick = () => {
     if (currentVideoEl) {
       currentVideoEl.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   };
 
-  // 新規追加：1番上に移動ボタンの処理
-  function scrollToTop() {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-  }
-
-  // スクロール位置でボタンの表示/非表示を制御
-  function toggleTopButton() {
-    if (window.scrollY > 300) {        // 300px以上スクロールしたら表示
-      topBtn.style.display = "block";
-    } else {
-      topBtn.style.display = "none";
-    }
-  }
+  topBtn.onclick = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   // メイン実行
   async function main() {
@@ -309,11 +323,10 @@
     }
   }
 
-  // イベントリスナー
-  window.addEventListener("scroll", toggleTopButton);
-  topBtn.addEventListener("click", scrollToTop);
+  // イベント設定
+  clearHistoryBtn.addEventListener("click", clearHistory);
 
-  // ページ読み込み時に実行
+  // ページ読み込み
   main();
 </script>
 </body>
