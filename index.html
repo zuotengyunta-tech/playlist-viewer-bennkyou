@@ -15,7 +15,7 @@
       gap: 15px;
     }
 
-    /* 左側：再生履歴（スライド式・完全格納） */
+    /* 左側：再生履歴（スライド式） */
     #sidebar {
       width: 0;
       overflow: hidden;
@@ -25,7 +25,6 @@
       transition: width 0.4s ease;
       height: fit-content;
       align-self: flex-start;
-      padding: 0;
     }
     #sidebar.open {
       width: 340px;
@@ -37,18 +36,11 @@
       align-items: center;
       margin-bottom: 12px;
     }
-    #sidebar h3 {
-      margin: 0;
-      font-size: 16px;
-    }
+    #sidebar h3 { margin: 0; font-size: 16px; }
     #clearHistoryBtn {
-      font-size: 11px;
-      padding: 4px 10px;
-      background: #f44336;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
+      font-size: 11px; padding: 4px 10px;
+      background: #f44336; color: white;
+      border: none; border-radius: 4px; cursor: pointer;
     }
     .history-item {
       padding: 10px;
@@ -56,66 +48,60 @@
       border-radius: 6px;
       font-size: 14px;
       cursor: pointer;
-      line-height: 1.4;
     }
-    .history-item:hover {
-      background: #f5f5f5;
-    }
+    .history-item:hover { background: #f5f5f5; }
 
-    /* トグルボタン（左端に固定） */
+    /* トグルボタン */
     #toggleBtn {
       position: fixed;
       left: 15px;
       top: 25px;
-      width: 32px;
-      height: 32px;
-      background: #333;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      font-size: 18px;
-      cursor: pointer;
+      width: 32px; height: 32px;
+      background: #333; color: white;
+      border: none; border-radius: 50%;
+      font-size: 18px; cursor: pointer;
       z-index: 200;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    }
-    #toggleBtn:hover {
-      background: #555;
+      display: flex; align-items: center; justify-content: center;
     }
 
-    /* 右側メインエリア */
+    /* メインエリア */
     #main {
       flex: 1;
       display: flex;
       gap: 25px;
-      max-width: 1250px;
+      max-width: 1280px;
     }
 
-    /* サムネイルエリア（横3列・細長すぎないように調整） */
+    /* サムネイルエリア（独立スクロール） */
     #thumbnail-area {
       flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-height: 100vh;
     }
     h2 {
-      margin: 0 0 20px 0;
+      margin: 0 0 15px 0;
       text-align: center;
       font-size: 25px;
+    }
+    #videos-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 10px;
     }
     #videos {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
+      gap: 18px;
     }
     .video-item {
       background: white;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 3px 12px rgba(0,0,0,0.1);
-      transition: all 0.2s;
     }
     .video-item:hover {
-      transform: translateY(-5px);
+      transform: translateY(-4px);
       box-shadow: 0 8px 20px rgba(0,0,0,0.15);
     }
     .thumbnail {
@@ -131,33 +117,31 @@
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 62px; height: 62px;
+      width: 60px; height: 60px;
       background: rgba(0,0,0,0.78);
       color: white;
       border-radius: 50%;
-      display: grid;
-      place-items: center;
-      font-size: 34px;
+      display: grid; place-items: center;
+      font-size: 32px;
     }
-    .play-btn:hover {
-      background: #ff0000;
-      transform: translate(-50%, -50%) scale(1.1);
-    }
+    .play-btn:hover { background: #ff0000; }
     .video-item p {
       margin: 12px;
-      font-size: 14.8px;
+      font-size: 14.5px;
       line-height: 1.45;
       display: -webkit-box;
       -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
       overflow: hidden;
-      min-height: 43px;
+      min-height: 42px;
     }
 
-    /* プレイヤーエリア */
+    /* プレイヤーエリア（固定） */
     #player-area {
       width: 720px;
       flex-shrink: 0;
+      align-self: flex-start;
+      position: sticky;
+      top: 20px;
     }
     #player {
       width: 100%;
@@ -174,11 +158,11 @@
     #loading {
       grid-column: 1 / -1;
       text-align: center;
-      padding: 40px;
+      padding: 30px;
       color: #666;
     }
 
-    /* 右下固定ボタン */
+    /* 右下ボタン */
     .fixed-buttons {
       position: fixed;
       right: 40px;
@@ -207,7 +191,7 @@
   <!-- トグルボタン -->
   <button id="toggleBtn">›</button>
 
-  <!-- 再生履歴（スライド） -->
+  <!-- 再生履歴 -->
   <div id="sidebar">
     <div id="sidebar-header">
       <h3>再生履歴</h3>
@@ -216,14 +200,18 @@
     <div id="history"></div>
   </div>
 
-  <!-- メインエリア -->
+  <!-- メイン -->
   <div id="main">
+    <!-- サムネイルエリア（ここだけスクロール） -->
     <div id="thumbnail-area">
       <h2>Frann Playlist Viewer</h2>
-      <div id="videos"></div>
-      <div id="loading">読み込み中...</div>
+      <div id="videos-wrapper">
+        <div id="videos"></div>
+        <div id="loading">読み込み中...</div>
+      </div>
     </div>
 
+    <!-- プレイヤー（固定） -->
     <div id="player-area">
       <div id="player"></div>
     </div>
@@ -248,6 +236,7 @@
 
   const sidebar = document.getElementById("sidebar");
   const toggleBtn = document.getElementById("toggleBtn");
+  const videosWrapper = document.getElementById("videos-wrapper");
   const videosContainer = document.getElementById("videos");
   const loadingEl = document.getElementById("loading");
   const player = document.getElementById("player");
@@ -300,7 +289,6 @@
     }
   }
 
-  // YouTube動画読み込み
   async function fetchAllVideos() {
     let items = [];
     let pageToken = "";
@@ -360,24 +348,12 @@
     saveHistory({ id: videoId, title });
   }
 
-  function handleScroll() {
-    if (isLoading) return;
-    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 800) {
-      renderMoreVideos(9);
-    }
-  }
-
-  // ボタン
-  jumpBtn.onclick = () => currentVideoEl?.scrollIntoView({behavior: "smooth", block: "center"});
-  topBtn.onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
-
-  // メイン実行
+  // メイン
   async function main() {
     try {
       allItems = await fetchAllVideos();
       renderHistory();
-      renderMoreVideos(12);
-      window.addEventListener("scroll", handleScroll);
+      renderMoreVideos(15);
     } catch (err) {
       videosContainer.innerHTML = `<p style="color:red; padding:20px;">エラー: ${err.message}</p>`;
     }
