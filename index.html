@@ -4,156 +4,297 @@
   <meta charset="UTF-8" />
   <title>Frann Playlist Viewer</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-
-    #videos {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 15px;
-      margin-top: 20px;
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      display: flex;
+      background: #f8f8f8;
     }
 
-    .video-item {
-      cursor: pointer;
-      border: 1px solid #ddd;
-      padding: 10px;
-      border-radius: 8px;
-      transition: transform 0.1s;
+    /* 左側：メインエリア（動画一覧＋プレイヤー） */
+    #main {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      height: 100vh;
     }
 
-    .video-item:hover { transform: scale(1.02); }
+    h2 { margin: 0 0 10px 0; }
 
-    .video-item img {
-      width: 100%;
-      border-radius: 6px;
-      loading: lazy;
-    }
-
-    .active {
-      outline: 3px solid red;
+    #player {
+      margin-bottom: 30px;
+      max-width: 640px;
     }
 
     iframe {
       width: 100%;
-      max-width: 560px;
-      height: 315px;
-      margin-top: 20px;
+      aspect-ratio: 16 / 9;
+      border: none;
+      border-radius: 12px;
     }
 
-    /* 右固定ボタン */
+    #videos {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .video-item {
+      cursor: pointer;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .video-item:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .video-item img {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+    }
+
+    .video-item p {
+      margin: 10px 12px;
+      font-size: 15px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .active {
+      outline: 4px solid #ff0000;
+      outline-offset: -4px;
+    }
+
+    /* 右側：再生履歴 */
+    #sidebar {
+      width: 320px;
+      border-left: 1px solid #ddd;
+      background: white;
+      padding: 20px 15px;
+      overflow-y: auto;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+    }
+
+    #sidebar h3 {
+      margin: 0 0 15px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .history-item {
+      cursor: pointer;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1.3;
+    }
+
+    .history-item:hover {
+      background: #f0f0f0;
+    }
+
+    /* 右下固定ボタン */
     #jumpBtn {
       position: fixed;
-      right: 20px;
+      right: 340px;
       bottom: 20px;
-      padding: 12px 16px;
+      padding: 12px 18px;
       border: none;
-      border-radius: 8px;
+      border-radius: 999px;
       background: #ff0000;
       color: #fff;
-      cursor: pointer;
       font-weight: bold;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: none;
+      z-index: 100;
     }
 
     #jumpBtn:hover {
-      opacity: 0.85;
+      background: #cc0000;
     }
   </style>
 </head>
 <body>
 
-<h2>Frann 再生リストビューアー</h2>
+<div id="main">
+  <h2>Frann Playlist Viewer</h2>
+  <div id="player"></div>
+  <div id="videos">読み込み中...</div>
+</div>
 
-<div id="player"></div>
-<button id="jumpBtn">再生中へ</button>
+<div id="sidebar">
+  <h3>再生履歴</h3>
+  <div id="history"></div>
+</div>
 
-<div id="videos">読み込み中...</div>
+<button id="jumpBtn">▶ 再生中へ戻る</button>
 
 <script>
+  // ====================== 設定 ======================
   const apiKey = "AIzaSyAxk1YpQSe-qDtFUSUmnjnduanag41Mlyk";
+  const playlistId = "PLExT6MVBKs2CzmEcSCpaSQP_u7XONu6kD";   // ★ ここはあなたの再生リストIDのまま
 
-  // ★ 差し替え済み
-  const playlistId = "PLExT6MVBKs2CzmEcSCpaSQP_u7XONu6kD";
+  // ====================== 変数 ======================
+  let currentActive = null;
+  let currentVideoEl = null;
 
-  const container = document.getElementById("videos");
+  const videosContainer = document.getElementById("videos");
   const player = document.getElementById("player");
   const jumpBtn = document.getElementById("jumpBtn");
+  const historyBox = document.getElementById("history");
 
-  let currentActive = null;
+  // ====================== 履歴機能 ======================
+  function loadHistory() {
+    return JSON.parse(localStorage.getItem("frann_history") || "[]");
+  }
 
+  function saveHistory(video) {
+    let history = loadHistory();
+    // 重複を削除して先頭に追加
+    history = history.filter(item => item.id !== video.id);
+    history.unshift(video);
+    history = history.slice(0, 30); // 最大30件
+    localStorage.setItem("frann_history", JSON.stringify(history));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const history = loadHistory();
+    historyBox.innerHTML = "";
+
+    history.forEach(item => {
+      const div = document.createElement("div");
+      div.className = "history-item";
+      div.textContent = item.title;
+      div.onclick = () => {
+        // 該当動画までスクロール
+        const target = document.querySelector(`[data-id="${item.id}"]`);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      };
+      historyBox.appendChild(div);
+    });
+  }
+
+  // ====================== YouTube API ======================
   async function fetchAllVideos(pageToken = "", allItems = []) {
     const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${apiKey}&pageToken=${pageToken}`;
     const res = await fetch(url);
     const data = await res.json();
 
-    if (!res.ok) throw new Error(data.error?.message || "API fetch error");
+    if (!res.ok) throw new Error(data.error?.message || "APIエラー");
 
     if (data.items) allItems = allItems.concat(data.items);
-    if (data.nextPageToken) return fetchAllVideos(data.nextPageToken, allItems);
+    if (data.nextPageToken) {
+      return fetchAllVideos(data.nextPageToken, allItems);
+    }
     return allItems;
   }
 
+  // ====================== 描画（チャンクで軽量化） ======================
   function renderVideos(items) {
-    container.innerHTML = "";
+    videosContainer.innerHTML = "";
+    let index = 0;
 
-    const fragment = document.createDocumentFragment();
+    function chunk() {
+      const fragment = document.createDocumentFragment();
 
-    items.forEach(item => {
-      const title = item.snippet.title;
-      const videoId = item.snippet.resourceId?.videoId || "";
-      if (!videoId) return;
+      for (let i = 0; i < 15 && index < items.length; i++, index++) {
+        const item = items[index];
+        const title = item.snippet.title;
+        const videoId = item.snippet.resourceId?.videoId;
+        if (!videoId) continue;
 
-      const thumbnail =
-        item.snippet.thumbnails?.medium?.url ||
-        item.snippet.thumbnails?.default?.url ||
-        "";
+        const thumbnail = item.snippet.thumbnails?.medium?.url || 
+                         item.snippet.thumbnails?.default?.url || "";
 
-      const div = document.createElement("div");
-      div.className = "video-item";
+        const div = document.createElement("div");
+        div.className = "video-item";
+        div.dataset.id = videoId;
 
-      div.innerHTML = `
-        <img src="${thumbnail}" alt="${title}" loading="lazy"/>
-        <p>${title}</p>
-      `;
-
-      div.onclick = () => {
-        player.innerHTML = `
-          <iframe
-            src="https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&autoplay=1"
-            allow="autoplay; encrypted-media"
-            allowfullscreen
-          ></iframe>
+        div.innerHTML = `
+          <img src="${thumbnail}" alt="${title}" loading="lazy">
+          <p>${title}</p>
         `;
 
-        // アクティブ更新
-        if (currentActive) currentActive.classList.remove("active");
-        div.classList.add("active");
-        currentActive = div;
+        div.onclick = () => playVideo(videoId, title, div);
+        fragment.appendChild(div);
+      }
 
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      };
+      videosContainer.appendChild(fragment);
 
-      fragment.appendChild(div);
-    });
+      if (index < items.length) {
+        requestAnimationFrame(chunk);
+      }
+    }
 
-    container.appendChild(fragment);
+    chunk();
   }
 
-  // 再生中へスクロール
+  // ====================== 動画再生 ======================
+  function playVideo(videoId, title, clickedElement) {
+    // プレイヤー表示
+    player.innerHTML = `
+      <iframe 
+        src="https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1"
+        allow="autoplay; encrypted-media" 
+        allowfullscreen>
+      </iframe>
+    `;
+
+    // アクティブ表示
+    if (currentActive) currentActive.classList.remove("active");
+    clickedElement.classList.add("active");
+    currentActive = clickedElement;
+    currentVideoEl = clickedElement;
+
+    // ボタン表示
+    jumpBtn.style.display = "block";
+
+    // 履歴に保存
+    saveHistory({ id: videoId, title: title });
+
+    // 上にスクロール
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ====================== ジャンプボタン ======================
   jumpBtn.onclick = () => {
-    if (currentActive) {
-      currentActive.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (currentVideoEl) {
+      currentVideoEl.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
     }
   };
 
-  fetchAllVideos()
-    .then(items => {
+  // ====================== メイン処理 ======================
+  async function main() {
+    try {
+      const items = await fetchAllVideos();
       renderVideos(items);
-    })
-    .catch(err => {
-      container.innerText = "APIエラー: " + err.message;
+      renderHistory();
+    } catch (err) {
+      videosContainer.innerHTML = `<p style="color:red;">エラー: ${err.message}</p>`;
       console.error(err);
-    });
+    }
+  }
+
+  main();
 </script>
 
 </body>
