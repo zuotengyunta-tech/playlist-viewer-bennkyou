@@ -15,7 +15,7 @@
       gap: 15px;
     }
 
-    /* 左側：再生履歴 */
+    /* 左側：再生履歴（スライド） */
     #sidebar {
       width: 0;
       overflow: hidden;
@@ -67,7 +67,7 @@
     #videos-wrapper {
       flex: 1;
       overflow-y: auto;
-      padding-right: 10px;
+      padding-right: 12px;
     }
     #videos {
       display: grid;
@@ -108,6 +108,7 @@
       min-height: 42px;
     }
 
+    /* プレイヤー（固定） */
     #player-area {
       width: 720px;
       flex-shrink: 0;
@@ -129,9 +130,9 @@
 
     #loading {
       text-align: center;
-      padding: 40px;
+      padding: 50px 20px;
       color: #666;
-      font-size: 15px;
+      font-size: 16px;
     }
 
     .fixed-buttons {
@@ -174,7 +175,7 @@
       <h2>Frann Playlist Viewer</h2>
       <div id="videos-wrapper">
         <div id="videos"></div>
-        <div id="loading">読み込み中...</div>
+        <div id="loading">全動画を読み込み中...（少しお待ちください）</div>
       </div>
     </div>
 
@@ -193,10 +194,8 @@
   const playlistId = "PLExT6MVBKs2CzmEcSCpaSQP_u7XONu6kD";
 
   let allItems = [];
-  let currentIndex = 0;
   let currentActive = null;
   let currentVideoEl = null;
-  let isLoading = false;
   let isSidebarOpen = false;
 
   const sidebar = document.getElementById("sidebar");
@@ -210,7 +209,7 @@
   const clearHistoryBtn = document.getElementById("clearHistoryBtn");
   const historyBox = document.getElementById("history");
 
-  // 履歴機能（変更なし）
+  // 履歴機能
   function loadHistory() { return JSON.parse(localStorage.getItem("frann_history") || "[]"); }
   function saveHistory(video) {
     let history = loadHistory();
@@ -253,28 +252,29 @@
     }
   }
 
-  // 高速化：最初のページだけ取得
-  async function fetchInitialVideos() {
-    const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${apiKey}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    return data.items || [];
+  // 全動画を一括取得（100個でも200個でも対応）
+  async function fetchAllVideos() {
+    let items = [];
+    let pageToken = "";
+    do {
+      const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${apiKey}&pageToken=${pageToken}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.items) items = items.concat(data.items);
+      pageToken = data.nextPageToken;
+    } while (pageToken);
+    return items;
   }
 
-  function renderMoreVideos(count = 12) {
-    if (isLoading || currentIndex >= allItems.length) return;
-    isLoading = true;
-    loadingEl.textContent = "さらに読み込み中...";
-    loadingEl.style.display = "block";
-
+  // 全サムネイルを一括表示
+  function renderAllVideos(items) {
+    videosContainer.innerHTML = "";
     const fragment = document.createDocumentFragment();
-    const end = Math.min(currentIndex + count, allItems.length);
 
-    for (let i = currentIndex; i < end; i++) {
-      const item = allItems[i];
+    items.forEach(item => {
       const title = item.snippet.title;
       const videoId = item.snippet.resourceId?.videoId;
-      if (!videoId) continue;
+      if (!videoId) return;
       const thumbnail = item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || "";
 
       const div = document.createElement("div");
@@ -292,15 +292,10 @@
         playVideo(videoId, title, div);
       };
       fragment.appendChild(div);
-    }
+    });
+
     videosContainer.appendChild(fragment);
-    currentIndex = end;
-    isLoading = false;
-    if (currentIndex >= allItems.length) {
-      loadingEl.style.display = "none";
-    } else {
-      loadingEl.style.display = "block";
-    }
+    loadingEl.style.display = "none";
   }
 
   function playVideo(videoId, title, videoItemElement) {
@@ -312,23 +307,16 @@
     saveHistory({ id: videoId, title });
   }
 
-  // スクロールで追加読み込み
-  function handleScroll() {
-    if (isLoading) return;
-    const scrollBottom = videosWrapper.scrollHeight - videosWrapper.scrollTop - videosWrapper.clientHeight;
-    if (scrollBottom < 600) {
-      renderMoreVideos(12);
-    }
-  }
-
+  // メイン実行
   async function main() {
     try {
-      allItems = await fetchInitialVideos();   // 最初の50件だけ取得
+      loadingEl.textContent = "全動画を読み込み中...（100〜200個でも大丈夫です）";
+      allItems = await fetchAllVideos();     // 全動画取得
       renderHistory();
-      renderMoreVideos(12);                    // 最初は12個だけ表示（とても速い）
-      videosWrapper.addEventListener("scroll", handleScroll);
+      renderAllVideos(allItems);             // 一括表示
     } catch (err) {
       videosContainer.innerHTML = `<p style="color:red; padding:20px;">エラー: ${err.message}</p>`;
+      loadingEl.style.display = "none";
     }
   }
 
