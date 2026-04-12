@@ -15,7 +15,7 @@
       gap: 15px;
     }
 
-    /* 左側：再生履歴（スライド） */
+    /* 左側：再生履歴 */
     #sidebar {
       width: 0;
       overflow: hidden;
@@ -56,7 +56,6 @@
       max-width: 1280px;
     }
 
-    /* サムネイルエリア（独立スクロール） */
     #thumbnail-area {
       flex: 1;
       display: flex;
@@ -109,7 +108,6 @@
       min-height: 42px;
     }
 
-    /* プレイヤー（固定） */
     #player-area {
       width: 720px;
       flex-shrink: 0;
@@ -131,11 +129,11 @@
 
     #loading {
       text-align: center;
-      padding: 30px;
+      padding: 40px;
       color: #666;
+      font-size: 15px;
     }
 
-    /* 右下ボタン */
     .fixed-buttons {
       position: fixed;
       right: 40px;
@@ -212,7 +210,7 @@
   const clearHistoryBtn = document.getElementById("clearHistoryBtn");
   const historyBox = document.getElementById("history");
 
-  // 履歴機能
+  // 履歴機能（変更なし）
   function loadHistory() { return JSON.parse(localStorage.getItem("frann_history") || "[]"); }
   function saveHistory(video) {
     let history = loadHistory();
@@ -242,7 +240,6 @@
     }
   }
 
-  // サイドバー開閉
   function toggleSidebar() {
     isSidebarOpen = !isSidebarOpen;
     if (isSidebarOpen) {
@@ -256,7 +253,7 @@
     }
   }
 
-  // === 高速化：最初のページだけ即時取得 ===
+  // 高速化：最初のページだけ取得
   async function fetchInitialVideos() {
     const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${apiKey}`;
     const res = await fetch(url);
@@ -267,6 +264,7 @@
   function renderMoreVideos(count = 12) {
     if (isLoading || currentIndex >= allItems.length) return;
     isLoading = true;
+    loadingEl.textContent = "さらに読み込み中...";
     loadingEl.style.display = "block";
 
     const fragment = document.createDocumentFragment();
@@ -298,7 +296,11 @@
     videosContainer.appendChild(fragment);
     currentIndex = end;
     isLoading = false;
-    if (currentIndex >= allItems.length) loadingEl.style.display = "none";
+    if (currentIndex >= allItems.length) {
+      loadingEl.style.display = "none";
+    } else {
+      loadingEl.style.display = "block";
+    }
   }
 
   function playVideo(videoId, title, videoItemElement) {
@@ -310,13 +312,21 @@
     saveHistory({ id: videoId, title });
   }
 
-  // メイン（高速化版）
+  // スクロールで追加読み込み
+  function handleScroll() {
+    if (isLoading) return;
+    const scrollBottom = videosWrapper.scrollHeight - videosWrapper.scrollTop - videosWrapper.clientHeight;
+    if (scrollBottom < 600) {
+      renderMoreVideos(12);
+    }
+  }
+
   async function main() {
     try {
-      // 最初の50件だけ素早く取得
-      allItems = await fetchInitialVideos();
+      allItems = await fetchInitialVideos();   // 最初の50件だけ取得
       renderHistory();
-      renderMoreVideos(15);        // 最初に15個だけ表示 → とても速い
+      renderMoreVideos(12);                    // 最初は12個だけ表示（とても速い）
+      videosWrapper.addEventListener("scroll", handleScroll);
     } catch (err) {
       videosContainer.innerHTML = `<p style="color:red; padding:20px;">エラー: ${err.message}</p>`;
     }
