@@ -11,41 +11,35 @@
       font-family: Arial, sans-serif;
       background: #f8f8f8;
       display: flex;
-      gap: 15px;
       padding: 15px;
+      gap: 15px;
     }
 
-    /* 左上：再生履歴（折りたたみ式） */
+    /* 左側：再生履歴（スライド式・完全格納） */
     #sidebar {
-      width: 320px;
+      width: 0;
+      overflow: hidden;
       background: white;
       border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+      transition: width 0.4s ease;
       height: fit-content;
-      overflow: hidden;
-      transition: all 0.3s ease;
+      align-self: flex-start;
+      padding: 0;
+    }
+    #sidebar.open {
+      width: 340px;
+      padding: 15px;
     }
     #sidebar-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 15px;
-      background: #f0f0f0;
-      cursor: pointer;
+      margin-bottom: 12px;
     }
-    #sidebar-header h3 {
+    #sidebar h3 {
       margin: 0;
       font-size: 16px;
-    }
-    #toggleBtn {
-      font-size: 18px;
-      font-weight: bold;
-      transition: transform 0.3s;
-    }
-    #history-content {
-      padding: 10px 15px;
-      max-height: 70vh;
-      overflow-y: auto;
     }
     #clearHistoryBtn {
       font-size: 11px;
@@ -57,46 +51,73 @@
       cursor: pointer;
     }
     .history-item {
-      padding: 9px 10px;
-      margin-bottom: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
       border-radius: 6px;
-      font-size: 13.8px;
+      font-size: 14px;
       cursor: pointer;
+      line-height: 1.4;
     }
-    .history-item:hover { background: #f5f5f5; }
+    .history-item:hover {
+      background: #f5f5f5;
+    }
 
-    /* 右側全体 */
-    #right-area {
+    /* トグルボタン（左端に固定） */
+    #toggleBtn {
+      position: fixed;
+      left: 15px;
+      top: 25px;
+      width: 32px;
+      height: 32px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    #toggleBtn:hover {
+      background: #555;
+    }
+
+    /* 右側メインエリア */
+    #main {
       flex: 1;
       display: flex;
-      gap: 20px;
-      max-width: 1200px;
+      gap: 25px;
+      max-width: 1250px;
     }
 
-    /* 右側左：サムネイル一覧（横3列） */
+    /* サムネイルエリア（横3列・細長すぎないように調整） */
     #thumbnail-area {
       flex: 1;
-      display: flex;
-      flex-direction: column;
     }
     h2 {
-      margin: 0 0 15px 0;
+      margin: 0 0 20px 0;
       text-align: center;
-      font-size: 24px;
+      font-size: 25px;
     }
     #videos {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 18px;
-      flex: 1;
+      gap: 20px;
     }
     .video-item {
       background: white;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+      transition: all 0.2s;
     }
-    .video-item:hover { transform: translateY(-4px); }
+    .video-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
     .thumbnail {
       position: relative;
       cursor: pointer;
@@ -110,25 +131,30 @@
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 60px; height: 60px;
-      background: rgba(0,0,0,0.8);
+      width: 62px; height: 62px;
+      background: rgba(0,0,0,0.78);
       color: white;
       border-radius: 50%;
       display: grid;
       place-items: center;
-      font-size: 32px;
+      font-size: 34px;
     }
-    .play-btn:hover { background: #ff0000; }
+    .play-btn:hover {
+      background: #ff0000;
+      transform: translate(-50%, -50%) scale(1.1);
+    }
     .video-item p {
       margin: 12px;
-      font-size: 14.5px;
+      font-size: 14.8px;
       line-height: 1.45;
       display: -webkit-box;
       -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
       overflow: hidden;
+      min-height: 43px;
     }
 
-    /* 右側右：プレイヤー */
+    /* プレイヤーエリア */
     #player-area {
       width: 720px;
       flex-shrink: 0;
@@ -137,7 +163,7 @@
       width: 100%;
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      box-shadow: 0 5px 25px rgba(0,0,0,0.2);
     }
     iframe {
       width: 100%;
@@ -156,52 +182,48 @@
     .fixed-buttons {
       position: fixed;
       right: 40px;
-      bottom: 30px;
+      bottom: 35px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
       z-index: 100;
     }
     .fixed-btn {
-      padding: 12px 22px;
+      padding: 13px 24px;
       border: none;
       border-radius: 999px;
       color: #fff;
       font-weight: bold;
       cursor: pointer;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      box-shadow: 0 5px 18px rgba(0,0,0,0.35);
     }
-    .fixed-btn:hover { transform: scale(1.05); }
+    .fixed-btn:hover { transform: scale(1.06); }
     #jumpBtn { background: #ff0000; }
     #topBtn  { background: #333; }
   </style>
 </head>
 <body>
 
-  <!-- 左上：再生履歴（折りたたみ） -->
+  <!-- トグルボタン -->
+  <button id="toggleBtn">›</button>
+
+  <!-- 再生履歴（スライド） -->
   <div id="sidebar">
     <div id="sidebar-header">
       <h3>再生履歴</h3>
-      <div>
-        <button id="clearHistoryBtn">全削除</button>
-        <span id="toggleBtn">›</span>
-      </div>
+      <button id="clearHistoryBtn">全削除</button>
     </div>
-    <div id="history-content">
-      <div id="history"></div>
-    </div>
+    <div id="history"></div>
   </div>
 
-  <!-- 右側全体 -->
-  <div id="right-area">
-    <!-- サムネイル一覧 -->
+  <!-- メインエリア -->
+  <div id="main">
     <div id="thumbnail-area">
       <h2>Frann Playlist Viewer</h2>
       <div id="videos"></div>
       <div id="loading">読み込み中...</div>
     </div>
 
-    <!-- プレイヤー -->
     <div id="player-area">
       <div id="player"></div>
     </div>
@@ -222,8 +244,10 @@
   let currentActive = null;
   let currentVideoEl = null;
   let isLoading = false;
-  let isSidebarOpen = true;
+  let isSidebarOpen = false;
 
+  const sidebar = document.getElementById("sidebar");
+  const toggleBtn = document.getElementById("toggleBtn");
   const videosContainer = document.getElementById("videos");
   const loadingEl = document.getElementById("loading");
   const player = document.getElementById("player");
@@ -231,10 +255,8 @@
   const topBtn = document.getElementById("topBtn");
   const clearHistoryBtn = document.getElementById("clearHistoryBtn");
   const historyBox = document.getElementById("history");
-  const toggleBtn = document.getElementById("toggleBtn");
-  const sidebarContent = document.getElementById("history-content");
 
-  // 再生履歴
+  // 履歴機能
   function loadHistory() { return JSON.parse(localStorage.getItem("frann_history") || "[]"); }
   function saveHistory(video) {
     let history = loadHistory();
@@ -247,7 +269,7 @@
   function renderHistory() {
     const history = loadHistory();
     historyBox.innerHTML = history.length === 0 
-      ? '<p style="color:#888; text-align:center; padding:20px;">履歴はありません</p>' 
+      ? '<p style="color:#888; text-align:center; padding:30px 10px;">履歴はありません</p>' 
       : "";
     history.forEach(item => {
       const div = document.createElement("div");
@@ -264,19 +286,21 @@
     }
   }
 
-  // サイドバー折りたたみ
+  // サイドバー開閉
   function toggleSidebar() {
     isSidebarOpen = !isSidebarOpen;
     if (isSidebarOpen) {
-      sidebarContent.style.display = "block";
+      sidebar.classList.add("open");
       toggleBtn.textContent = "‹";
+      toggleBtn.style.left = "345px";
     } else {
-      sidebarContent.style.display = "none";
+      sidebar.classList.remove("open");
       toggleBtn.textContent = "›";
+      toggleBtn.style.left = "15px";
     }
   }
 
-  // YouTube API & 動画表示
+  // YouTube動画読み込み
   async function fetchAllVideos() {
     let items = [];
     let pageToken = "";
@@ -333,7 +357,7 @@
     videoItemElement.classList.add("active");
     currentActive = videoItemElement;
     currentVideoEl = videoItemElement;
-    saveHistory({ id: videoId, title: title });
+    saveHistory({ id: videoId, title });
   }
 
   function handleScroll() {
@@ -347,7 +371,7 @@
   jumpBtn.onclick = () => currentVideoEl?.scrollIntoView({behavior: "smooth", block: "center"});
   topBtn.onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
-  // メイン
+  // メイン実行
   async function main() {
     try {
       allItems = await fetchAllVideos();
@@ -359,7 +383,6 @@
     }
   }
 
-  // イベント
   toggleBtn.addEventListener("click", toggleSidebar);
   clearHistoryBtn.addEventListener("click", clearHistory);
   main();
