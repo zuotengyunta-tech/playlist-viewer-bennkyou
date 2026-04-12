@@ -14,21 +14,64 @@
       font-family: Arial, sans-serif;
       display: flex;
       background: #f8f8f8;
-    }
-    #main {
-      flex: 1;
-      padding: 20px 20px 80px;   /* 下に余裕を持たせておく */
-      overflow-y: auto;
-      height: 100vh;
-    }
-    h2 { 
-      margin: 0 0 20px 0; 
+      flex-direction: row;
     }
 
+    /* 左側：再生履歴（狭め） */
+    #sidebar {
+      width: 320px;
+      background: white;
+      padding: 20px 15px;
+      overflow-y: auto;
+      height: 100vh;
+      border-right: 1px solid #ddd;
+      position: sticky;
+      top: 0;
+    }
+    #sidebar h3 {
+      margin: 0 0 10px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #clearHistoryBtn {
+      font-size: 12px;
+      padding: 4px 10px;
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .history-item {
+      cursor: pointer;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+    .history-item:hover {
+      background: #f5f5f5;
+    }
+
+    /* 中央：メインエリア（プレイヤー + 動画一覧） */
+    #main {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      height: 100vh;
+      max-width: 800px;
+    }
+    h2 { margin: 0 0 20px 0; }
     #player { margin-bottom: 30px; max-width: 640px; }
     iframe {
-      width: 100%; aspect-ratio: 16 / 9;
-      border: none; border-radius: 12px;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: none;
+      border-radius: 12px;
     }
     #videos {
       display: grid;
@@ -51,13 +94,17 @@
       object-fit: cover;
     }
     .play-btn {
-      position: absolute; top: 50%; left: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
       transform: translate(-50%, -50%);
-      width: 70px; height: 70px;
+      width: 70px;
+      height: 70px;
       background: rgba(0,0,0,0.7);
       color: white;
       border-radius: 50%;
-      display: grid; place-items: center;
+      display: grid;
+      place-items: center;
       font-size: 36px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.4);
     }
@@ -79,40 +126,17 @@
       outline-offset: -4px;
     }
 
-    /* サイドバー */
-    #sidebar {
-      width: 340px;
-      border-left: 1px solid #ddd;
-      background: white;
-      padding: 20px 15px;
-      overflow-y: auto;
-      height: 100vh;
-      position: sticky;
-      top: 0;
+    /* 読み込み中 */
+    #loading {
+      text-align: center;
+      padding: 30px;
+      color: #666;
     }
-    #sidebar h3 {
-      margin: 0 0 8px 0;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    #clearHistoryBtn {
-      font-size: 12px; padding: 4px 10px;
-      background: #f44336; color: white;
-      border: none; border-radius: 4px; cursor: pointer;
-    }
-    .history-item {
-      cursor: pointer; padding: 10px; margin-bottom: 8px;
-      border-radius: 6px; font-size: 14px;
-    }
-    .history-item:hover { background: #f5f5f5; }
 
     /* 右下固定ボタン */
     .fixed-buttons {
       position: fixed;
-      right: 20px;
+      right: 30px;
       bottom: 25px;
       display: flex;
       flex-direction: column;
@@ -129,32 +153,37 @@
       box-shadow: 0 4px 15px rgba(0,0,0,0.3);
       transition: all 0.2s;
     }
-    .fixed-btn:hover { transform: scale(1.05); }
+    .fixed-btn:hover {
+      transform: scale(1.05);
+    }
     #jumpBtn { background: #ff0000; }
     #topBtn  { background: #333; }
-
-    #loading {
-      text-align: center; padding: 30px; color: #666;
-    }
   </style>
 </head>
 <body>
-<div id="main">
-  <h2>Frann Playlist Viewer</h2>
-  <div id="player"></div>
-  <div id="videos"></div>
-  <div id="loading">読み込み中...</div>
-</div>
 
-<div id="sidebar">
-  <h3>再生履歴 <button id="clearHistoryBtn">全削除</button></h3>
-  <div id="history"></div>
-</div>
+  <!-- 左側：再生履歴 -->
+  <div id="sidebar">
+    <h3>
+      再生履歴
+      <button id="clearHistoryBtn">全削除</button>
+    </h3>
+    <div id="history"></div>
+  </div>
 
-<div class="fixed-buttons">
-  <button id="jumpBtn" class="fixed-btn">▶ 再生中へ戻る</button>
-  <button id="topBtn" class="fixed-btn">↑ 一番上に戻る</button>
-</div>
+  <!-- 中央：プレイヤー + 動画一覧 -->
+  <div id="main">
+    <h2>Frann Playlist Viewer</h2>
+    <div id="player"></div>
+    <div id="videos"></div>
+    <div id="loading">読み込み中...</div>
+  </div>
+
+  <!-- 右下固定ボタン -->
+  <div class="fixed-buttons">
+    <button id="jumpBtn" class="fixed-btn">▶ 再生中へ戻る</button>
+    <button id="topBtn" class="fixed-btn">↑ 一番上に戻る</button>
+  </div>
 
 <script>
   const apiKey = "AIzaSyAxk1YpQSe-qDtFUSUmnjnduanag41Mlyk";
@@ -270,24 +299,17 @@
     }
   }
 
-  // ボタン
+  // ボタン機能
   jumpBtn.onclick = () => currentVideoEl?.scrollIntoView({behavior: "smooth", block: "center"});
 
-  // ★★★ 一番上に移動ボタン（より強力版） ★★★
   topBtn.onclick = () => {
-    // メインのスクロールコンテナを直接指定してトップへ
-    document.getElementById("main").scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-
-    // 念のため全体のスクロールも実行（保険）
+    document.getElementById("main").scrollTo({ top: 0, behavior: "smooth" });
     setTimeout(() => {
       document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
-      window.scrollTo({ top: 0, behavior: "smooth" });
     }, 50);
   };
 
+  // メイン実行
   async function main() {
     try {
       allItems = await fetchAllVideos();
