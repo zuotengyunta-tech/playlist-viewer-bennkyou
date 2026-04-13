@@ -16,10 +16,10 @@
       background: #f8f8f8;
       display: flex;
       padding: 15px;
-      gap: 15px;
+      gap: 12px;
     }
 
-    /* 左側：再生履歴 */
+    /* 再生履歴 */
     #sidebar {
       width: 0; overflow: hidden; background: white; border-radius: 12px;
       box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: width 0.4s ease;
@@ -39,19 +39,17 @@
     #main {
       flex: 1;
       display: flex;
-      gap: 12px;
-      max-width: 100%;
+      gap: 10px;
       width: 100%;
     }
 
-    /* プレイヤーエリア */
+    /* プレイヤー */
     #player-area {
       width: var(--player-width);
       height: var(--player-height);
       flex-shrink: 0;
       position: relative;
       min-width: 320px;
-      max-width: 70%;
       background: white;
       border-radius: 12px;
       box-shadow: 0 5px 25px rgba(0,0,0,0.2);
@@ -62,7 +60,7 @@
 
     #player-horizontal-handle {
       position: absolute; top: 0; right: -4px; width: 9px; height: 100%;
-      background: transparent; cursor: col-resize; z-index: 220;
+      cursor: col-resize; z-index: 220;
     }
     #vertical-resize-bar {
       position: absolute; bottom: 0; left: 0; width: 100%; height: 8px;
@@ -71,35 +69,35 @@
     #vertical-resize-bar:hover, #vertical-resize-bar.active { background: #ff0000; }
 
     #resize-bar {
-      width: 6px; background: #ddd; cursor: col-resize; border-radius: 3px;
-      margin: 0 -3px; z-index: 100;
+      width: 6px; background: #ddd; cursor: col-resize;
+      z-index: 100;
     }
     #resize-bar:hover, #resize-bar.active { background: #ff0000; }
 
-    /* 右側：サムネイルエリア（余白を極力削減） */
+    /* サムネイルエリア - 右端まで最大化 */
     #thumbnail-area {
       flex: 1;
       display: flex;
       flex-direction: column;
       max-height: 100vh;
-      padding-right: 4px; /* 右端の余白を最小に */
+      padding-right: 0; /* 右端まで詰める */
     }
     h2 { 
-      margin: 0 0 12px 0; 
+      margin: 0 0 10px 0; 
       text-align: center; 
-      font-size: 25px; 
+      font-size: 24px; 
     }
     #videos-wrapper {
       flex: 1;
       overflow-y: auto;
-      padding-right: 8px; /* スクロールバー分を少し確保 */
+      padding: 0 4px 20px 4px; /* 右側も最小限に */
     }
     #videos {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* 自動調整で右まで詰める */
-      gap: 16px;
-      padding: 4px 4px 20px 4px; /* 右側の余白を最小化 */
-      max-width: 100%;
+      grid-template-columns: repeat(4, 1fr); /* 4列固定 */
+      gap: 14px;
+      padding: 0 6px 0 2px; /* 右端まで詰める */
+      width: 100%;
     }
 
     .video-item {
@@ -107,6 +105,7 @@
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
     }
     .video-item:hover { transform: translateY(-4px); }
     .thumbnail { position: relative; }
@@ -118,27 +117,27 @@
     .play-btn {
       position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 56px; height: 56px;
-      background: rgba(0,0,0,0.75);
+      width: 54px; height: 54px;
+      background: rgba(0,0,0,0.8);
       color: white;
       border-radius: 50%;
       display: grid; place-items: center;
-      font-size: 30px;
+      font-size: 28px;
     }
     .active { outline: 4px solid #ff0000; outline-offset: -4px; }
 
     /* 右下ボタン */
     .fixed-buttons {
       position: fixed;
-      right: 30px;
-      bottom: 30px;
+      right: 25px;
+      bottom: 25px;
       display: flex;
       flex-direction: column;
       gap: 10px;
       z-index: 100;
     }
     .fixed-btn {
-      padding: 13px 24px;
+      padding: 12px 22px;
       border: none;
       border-radius: 999px;
       color: #fff;
@@ -200,14 +199,11 @@
   const videosContainer = document.getElementById("videos");
   const videosWrapper = document.getElementById("videos-wrapper");
   const loadingEl = document.getElementById("loading");
-  const jumpBtn = document.getElementById("jumpBtn");
-  const topBtn = document.getElementById("topBtn");
 
   let currentActive = null;
   let currentVideoEl = null;
   let isHistoryOpen = false;
 
-  // 履歴機能
   function loadHistory() { return JSON.parse(localStorage.getItem("frann_history") || "[]"); }
   function saveHistory(video) {
     let history = loadHistory();
@@ -289,32 +285,31 @@
     loadingEl.style.display = "none";
   }
 
-  // リサイズ機能
   function initResize() {
-    let isHorizontal = false, isVertical = false;
+    let isH = false, isV = false;
 
-    const startH = () => { isHorizontal = true; document.body.style.cursor = "col-resize"; };
-    resizeBar.addEventListener("mousedown", startH);
-    playerHorizontalHandle.addEventListener("mousedown", startH);
+    const start = () => { isH = true; document.body.style.cursor = "col-resize"; };
+    resizeBar.addEventListener("mousedown", start);
+    playerHorizontalHandle.addEventListener("mousedown", start);
 
-    verticalResizeBar.addEventListener("mousedown", () => { isVertical = true; document.body.style.cursor = "row-resize"; });
+    verticalResizeBar.addEventListener("mousedown", () => { isV = true; document.body.style.cursor = "row-resize"; });
 
     document.addEventListener("mousemove", (e) => {
-      if (isHorizontal) {
-        const mainRect = document.getElementById("main").getBoundingClientRect();
-        let newW = ((e.clientX - mainRect.left) / mainRect.width) * 100;
-        newW = Math.max(25, Math.min(70, newW));
-        document.documentElement.style.setProperty("--player-width", newW + "%");
+      if (isH) {
+        const rect = document.getElementById("main").getBoundingClientRect();
+        let w = ((e.clientX - rect.left) / rect.width) * 100;
+        w = Math.max(25, Math.min(70, w));
+        document.documentElement.style.setProperty("--player-width", w + "%");
       }
-      if (isVertical) {
+      if (isV) {
         const rect = playerArea.getBoundingClientRect();
-        let newH = Math.max(280, Math.min(window.innerHeight * 0.95, e.clientY - rect.top));
-        document.documentElement.style.setProperty("--player-height", (newH / window.innerHeight * 100) + "vh");
+        let h = Math.max(280, Math.min(window.innerHeight * 0.95, e.clientY - rect.top));
+        document.documentElement.style.setProperty("--player-height", (h / window.innerHeight * 100) + "vh");
       }
     });
 
     document.addEventListener("mouseup", () => {
-      isHorizontal = isVertical = false;
+      isH = isV = false;
       document.body.style.cursor = "default";
     });
   }
@@ -327,9 +322,6 @@
 
   toggleHistoryBtn.addEventListener("click", toggleHistory);
   clearHistoryBtn.addEventListener("click", clearHistory);
-  jumpBtn.onclick = () => currentVideoEl?.scrollIntoView({behavior:"smooth", block:"center"});
-  topBtn.onclick = () => videosWrapper.scrollTo({top:0, behavior:"smooth"});
-
   initResize();
   main();
 </script>
