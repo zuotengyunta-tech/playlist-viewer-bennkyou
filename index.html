@@ -2,11 +2,11 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>Frann Playlist Viewer</title>
+  <title>ジョージ・メンズコーチ｜Playlist Viewer</title>
   <style>
     :root {
-      --player-width: 45%;   /* 左右比率（初期値） */
-      --player-height: 65vh; /* 上下比率（初期値） */
+      --player-width: 45%;
+      --player-height: 65vh;
     }
     html, body {
       margin: 0; padding: 0; height: 100%; scroll-behavior: smooth;
@@ -18,7 +18,6 @@
       padding: 15px;
       gap: 15px;
     }
-
     /* 左側：再生履歴 */
     #sidebar {
       width: 0;
@@ -46,7 +45,6 @@
     }
     .history-item:hover { background: #f5f5f5; }
 
-    /* 再生履歴トグルボタン */
     #toggleHistoryBtn {
       position: fixed; left: 15px; top: 25px;
       width: 32px; height: 32px;
@@ -55,7 +53,6 @@
       font-size: 18px; cursor: pointer; z-index: 300;
     }
 
-    /* メインエリア */
     #main {
       flex: 1;
       display: flex;
@@ -64,7 +61,6 @@
       width: 100%;
     }
 
-    /* 左：プレイヤーエリア（上下・左右両方リサイズ可能） */
     #player-area {
       width: var(--player-width);
       height: var(--player-height);
@@ -79,7 +75,6 @@
       overflow: hidden;
     }
 
-    /* プレイヤー本体 */
     #player {
       width: 100%;
       height: 100%;
@@ -91,7 +86,6 @@
       display: block;
     }
 
-    /* プレイヤー右端の横リサイズハンドル（プレイヤー上でもドラッグ可能に） */
     #player-horizontal-handle {
       position: absolute;
       top: 0;
@@ -103,7 +97,6 @@
       z-index: 220;
     }
 
-    /* プレイヤー下端の縦リサイズバー */
     #vertical-resize-bar {
       position: absolute;
       bottom: 0;
@@ -120,7 +113,6 @@
       background: #ff0000;
     }
 
-    /* 中央：左右リサイズバー */
     #resize-bar {
       width: 6px;
       background: #ddd;
@@ -135,7 +127,6 @@
       background: #ff0000;
     }
 
-    /* 右側：サムネイルエリア */
     #thumbnail-area {
       flex: 1;
       display: flex;
@@ -158,9 +149,10 @@
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+      cursor: pointer;
     }
     .video-item:hover { transform: translateY(-4px); }
-    .thumbnail { position: relative; cursor: pointer; }
+    .thumbnail { position: relative; }
     .thumbnail img {
       width: 100%;
       aspect-ratio: 16 / 9;
@@ -182,7 +174,6 @@
       outline-offset: -4px;
     }
 
-    /* 右下固定ボタン */
     .fixed-buttons {
       position: fixed;
       right: 40px;
@@ -223,9 +214,7 @@
     <!-- 左：プレイヤー -->
     <div id="player-area">
       <div id="player"></div>
-      <!-- プレイヤー右端ハンドル（ここをドラッグしても左右調整可能） -->
       <div id="player-horizontal-handle"></div>
-      <!-- プレイヤー下端バー（ここをドラッグで上下調整） -->
       <div id="vertical-resize-bar"></div>
     </div>
 
@@ -234,10 +223,10 @@
 
     <!-- 右：サムネイル一覧 -->
     <div id="thumbnail-area">
-      <h2>Frann Playlist Viewer</h2>
+      <h2>ジョージ・メンズコーチ｜全動画</h2>
       <div id="videos-wrapper">
         <div id="videos"></div>
-        <div id="loading">全動画を読み込み中...</div>
+        <div id="loading">動画を読み込み中...</div>
       </div>
     </div>
   </div>
@@ -249,26 +238,23 @@
   </div>
 
 <script>
-  // === 設定 ===
-  const apiKey = "AIzaSyAxk1YpQSe-qDtFUSUmnjnduanag41Mlyk";
-  const playlistId = "PLExT6MVBKs2CzmEcSCpaSQP_u7XONu6kD";
+  // === 設定（ジョージ・メンズコーチ用に変更） ===
+  const API_KEY = "AIzaSyAxk1YpQSe-qDtFUSUmnjnduanag41Mlyk";
+  const CHANNEL_HANDLE = "coachjoji";
 
   // === DOM ===
   const sidebar = document.getElementById("sidebar");
   const toggleHistoryBtn = document.getElementById("toggleHistoryBtn");
   const clearHistoryBtn = document.getElementById("clearHistoryBtn");
   const historyBox = document.getElementById("history");
-
   const playerArea = document.getElementById("player-area");
   const player = document.getElementById("player");
   const resizeBar = document.getElementById("resize-bar");
   const playerHorizontalHandle = document.getElementById("player-horizontal-handle");
   const verticalResizeBar = document.getElementById("vertical-resize-bar");
-
   const videosContainer = document.getElementById("videos");
   const videosWrapper = document.getElementById("videos-wrapper");
   const loadingEl = document.getElementById("loading");
-
   const jumpBtn = document.getElementById("jumpBtn");
   const topBtn = document.getElementById("topBtn");
 
@@ -277,7 +263,7 @@
   let currentVideoEl = null;
   let isHistoryOpen = false;
 
-  // ====================== 履歴機能（復活） ======================
+  // ====================== 履歴機能 ======================
   function loadHistory() { return JSON.parse(localStorage.getItem("frann_history") || "[]"); }
   function saveHistory(video) {
     let history = loadHistory();
@@ -327,28 +313,60 @@
     saveHistory({ id: videoId, title });
   }
 
-  // ====================== YouTube API ======================
-  async function fetchAllVideos() {
-    let items = [];
+  // ====================== YouTube API（ジョージ用） ======================
+  async function fetchJson(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  async function getChannelId() {
+    const url = `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${CHANNEL_HANDLE}&key=${API_KEY}`;
+    const data = await fetchJson(url);
+    if (!data.items?.length) throw new Error("チャンネル取得失敗");
+    return data.items[0].id;
+  }
+
+  async function getUploadsPlaylistId(channelId) {
+    const url = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${API_KEY}`;
+    const data = await fetchJson(url);
+    return data.items[0].contentDetails.relatedPlaylists.uploads;
+  }
+
+  async function getAllVideos(playlistId) {
+    let videos = [];
     let pageToken = "";
     do {
-      const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${apiKey}&pageToken=${pageToken}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.items) items = items.concat(data.items);
-      pageToken = data.nextPageToken;
+      const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${playlistId}&key=${API_KEY}&pageToken=${pageToken}`;
+      const data = await fetchJson(url);
+      videos.push(...(data.items || []));
+      pageToken = data.nextPageToken || "";
     } while (pageToken);
-    return items;
+    return videos;
+  }
+
+  async function fetchAllVideos() {
+    const channelId = await getChannelId();
+    const playlistId = await getUploadsPlaylistId(channelId);
+    let videos = await getAllVideos(playlistId);
+
+    // 新しい順（公開日降順）にソート
+    videos.sort((a, b) => new Date(b.snippet.publishedAt) - new Date(a.snippet.publishedAt));
+
+    return videos;
   }
 
   function renderAllVideos(items) {
     videosContainer.innerHTML = "";
     const fragment = document.createDocumentFragment();
+
     items.forEach(item => {
       const title = item.snippet.title;
       const videoId = item.snippet.resourceId?.videoId;
       if (!videoId) return;
+
       const thumbnail = item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || "";
+
       const div = document.createElement("div");
       div.className = "video-item";
       div.dataset.id = videoId;
@@ -359,22 +377,27 @@
         </div>
         <p>${title}</p>
       `;
+
       div.querySelector('.play-btn').onclick = (e) => {
         e.stopPropagation();
         playVideo(videoId, title, div);
       };
+
+      // サムネイル全体クリックでも再生
+      div.onclick = () => playVideo(videoId, title, div);
+
       fragment.appendChild(div);
     });
+
     videosContainer.appendChild(fragment);
     loadingEl.style.display = "none";
   }
 
-  // ====================== リサイズ機能（左右＋上下） ======================
+  // ====================== リサイズ機能 ======================
   let isResizingHorizontal = false;
   let isResizingVertical = false;
 
   function initResize() {
-    // 左右リサイズ（中央バー ＋ プレイヤー右端ハンドル）
     const startHorizontal = (e) => {
       isResizingHorizontal = true;
       resizeBar.classList.add("active");
@@ -382,10 +405,10 @@
       document.body.style.cursor = "col-resize";
       e.preventDefault();
     };
+
     resizeBar.addEventListener("mousedown", startHorizontal);
     playerHorizontalHandle.addEventListener("mousedown", startHorizontal);
 
-    // 上下リサイズ（プレイヤー下端バー）
     verticalResizeBar.addEventListener("mousedown", (e) => {
       isResizingVertical = true;
       verticalResizeBar.classList.add("active");
@@ -393,7 +416,6 @@
       e.preventDefault();
     });
 
-    // マウス移動でリアルタイム調整
     document.addEventListener("mousemove", (e) => {
       if (isResizingHorizontal) {
         const mainRect = document.getElementById("main").getBoundingClientRect();
@@ -401,7 +423,6 @@
         newWidth = Math.max(25, Math.min(70, newWidth));
         document.documentElement.style.setProperty("--player-width", newWidth + "%");
       }
-
       if (isResizingVertical) {
         const playerRect = playerArea.getBoundingClientRect();
         let newHeightPx = e.clientY - playerRect.top;
@@ -411,7 +432,6 @@
       }
     });
 
-    // マウスを離したとき
     document.addEventListener("mouseup", () => {
       if (isResizingHorizontal) {
         isResizingHorizontal = false;
@@ -436,12 +456,13 @@
   // ====================== メイン ======================
   async function main() {
     try {
-      loadingEl.textContent = "全動画を読み込み中...";
+      loadingEl.textContent = "ジョージの動画をすべて読み込み中...";
       allItems = await fetchAllVideos();
       renderAllVideos(allItems);
-      renderHistory();           // 履歴表示
+      renderHistory();
     } catch (err) {
-      videosContainer.innerHTML = `<p style="color:red; padding:20px;">エラー: ${err.message}</p>`;
+      console.error(err);
+      videosContainer.innerHTML = `<p style="color:red; padding:20px;">読み込みエラー: ${err.message}</p>`;
       loadingEl.style.display = "none";
     }
   }
